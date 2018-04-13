@@ -405,6 +405,9 @@ func (d *Dapperfile) tag() string {
 	}
 	// repository name must be lowercase
 	cwd = strings.ToLower(cwd)
+	// repository must not include @ (e.g. Jenkins workspace)
+	// re-using re definition as safeguard
+	cwd = re.ReplaceAllLiteralString(cwd, "-")
 
 	output, _ := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	tag := strings.TrimSpace(string(output))
