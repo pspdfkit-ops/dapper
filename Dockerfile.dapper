@@ -11,9 +11,11 @@ RUN apt-get update && \
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GOPATH=/go PATH=/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash
 
-RUN wget -O - https://storage.googleapis.com/golang/go1.10.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
-    go get github.com/rancher/trash && go get github.com/golang/lint/golint
-
+RUN wget -O - -q https://storage.googleapis.com/golang/go1.10.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
+    wget -O /usr/local/sbin/dep -q https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 && \
+    chmod 755 /usr/local/sbin/dep && \
+    go get github.com/golang/lint/golint
+    
 ENV DOCKER_ARCH_amd64=amd64 \
     DOCKER_ARCH_arm=armhf \
     DOCKER_ARCH=DOCKER_ARCH_${ARCH}
@@ -26,7 +28,6 @@ RUN wget -O - https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
 ENV DAPPER_SOURCE /go/src/github.com/rancher/dapper
 ENV DAPPER_OUTPUT ./bin ./dist
 ENV DAPPER_DOCKER_SOCKET true
-ENV TRASH_CACHE ${DAPPER_SOURCE}/.trash-cache
 ENV DAPPER_ENV CROSS
 ENV HOME ${DAPPER_SOURCE}
 WORKDIR ${DAPPER_SOURCE}

@@ -12,6 +12,7 @@ if [ -z "$VERSION" ]; then
 fi
 
 mkdir -p bin
+test -d vendor || dep ensure -vendor-only  -v
 
 if [ "$CROSS" = 1 ]; then
     GOOS=darwin go build -ldflags "-X main.VERSION=$VERSION"  -o ./bin/dapper-Darwin-x86_64 main.go

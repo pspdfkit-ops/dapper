@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli.v1"
+	"github.com/urfave/cli"
 	"github.com/rancher/dapper/file"
 )
 
