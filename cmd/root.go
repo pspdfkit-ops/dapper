@@ -17,7 +17,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rancher/dapper/file"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,20 +27,8 @@ import (
 )
 
 var (
-	VERSION      string
-	cfgFile      string
-	debug        bool
-	directory    string
-	shell        bool
-	build        bool
-	filename     string
-	mode         string
-	socket       bool
-	no_out       bool
-	quiet        bool
-	keep         bool
-	no_context   bool
-	show_version bool
+	VERSION string
+	cfgFile string
 
 	rootCmd = &cobra.Command{
 		Use:   "dapper",
@@ -54,45 +44,51 @@ var (
 		DAPPER_RUN_ARGS        Args to add to the docker run command when building
 		DAPPER_ENV             Env vars that should be copied into the build`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if show_version {
+
+			if viper.GetBool("version") {
 				fmt.Printf("%s version %s\n", cmd.Name(), VERSION)
 				os.Exit(0)
 			}
-
-			if debug {
+			if viper.GetBool("debug") {
 				logrus.SetLevel(logrus.DebugLevel)
 			}
 
-			if err := os.Chdir(directory); err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to change to directory %s: %v\n", directory, err)
-				os.Exit(1)
+			if directory := viper.GetString("directory"); directory != "" {
+				if err := os.Chdir(directory); err != nil {
+					fmt.Fprintf(os.Stderr, "Failed to change to directory %s: %v\n", directory, err)
+					os.Exit(1)
+				}
 			}
 
-			dapperFile, err := file.Lookup(filename)
+			dapperFile, err := file.Lookup(viper.GetString("file"))
 			if err != nil {
 				fmt.Fprint(os.Stderr, err)
 				os.Exit(1)
 			}
 
-			dapperFile.Mode = mode
-			dapperFile.Socket = socket
-			dapperFile.NoOut = no_out
-			dapperFile.Quiet = quiet
-			dapperFile.Keep = keep
-			dapperFile.NoContext = no_context
+			dapperFile.Mode = viper.GetString("mode")
+			dapperFile.Socket = viper.GetBool("socket")
+			dapperFile.NoOut = viper.GetBool("no-out")
+			dapperFile.Quiet = viper.GetBool("quiet")
+			dapperFile.Keep = viper.GetBool("keep")
+			dapperFile.NoContext = viper.GetBool("no-context")
 
 			// todo extra cmd
-			if shell {
+			if viper.GetBool("shell") {
 				dapperFile.Shell(args)
 			}
 
 			// todo extra cmd
-			if build {
+			if viper.GetBool("build") {
 				dapperFile.Build(args)
 			}
 
-			dapperFile.Run(args)
+			if viper.GetBool("generate-bash-completion") {
+				cmd.GenBashCompletion(os.Stdout)
+				os.Exit(0)
+			}
 
+			dapperFile.Run(args)
 		},
 	}
 )
@@ -116,38 +112,58 @@ func init() {
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/.dapper.yaml)")
 
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "Print debugging")
-	rootCmd.PersistentFlags().StringVarP(&filename, "file", "f", "Dockerfile.dapper", "Dockerfile to build from")
-	rootCmd.PersistentFlags().StringVarP(&mode, "mode", "m", "auto", "Execution mode for Dapper bind/cp/auto")
-	rootCmd.PersistentFlags().StringVarP(&directory, "directory", "C", ".", "The directory in which to run, --file is relative to this")
-	rootCmd.PersistentFlags().BoolVarP(&shell, "shell", "s", false, "Launch a shell")
-	rootCmd.PersistentFlags().BoolVarP(&socket, "socket", "k", false, "Bind in the Docker socket")
-	rootCmd.PersistentFlags().BoolVar(&build, "build", false, "Perform a build")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Make Docker build quieter")
-	rootCmd.PersistentFlags().BoolVar(&keep, "keep", false, "Don't remove the container that was used to build")
-	rootCmd.PersistentFlags().BoolVarP(&no_context, "no-context", "X", false, "send Dockerfile via stdin to docker build command")
-	rootCmd.PersistentFlags().BoolVarP(&no_out, "no-out", "O", false, "Do not copy the output back (in --mode cp)")
-	rootCmd.PersistentFlags().BoolVarP(&show_version, "version", "v", false, "Show version")
+	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Print debugging")
+	rootCmd.PersistentFlags().StringP("file", "f", "Dockerfile.dapper", "Dockerfile to build from")
+	rootCmd.PersistentFlags().StringP("mode", "m", "auto", "Execution mode for Dapper bind/cp/auto")
+	rootCmd.PersistentFlags().StringP("directory", "C", ".", "The directory in which to run, --file is relative to this")
+	rootCmd.PersistentFlags().BoolP("shell", "s", false, "Launch a shell")
+	rootCmd.PersistentFlags().BoolP("socket", "k", false, "Bind in the Docker socket")
+	rootCmd.PersistentFlags().Bool("build", false, "Perform a build")
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Make Docker build quieter")
+	rootCmd.PersistentFlags().Bool("keep", false, "Don't remove the container that was used to build")
+	rootCmd.PersistentFlags().BoolP("no-context", "X", false, "send Dockerfile via stdin to docker build command")
+	rootCmd.PersistentFlags().BoolP("no-out", "O", false, "Do not copy the output back (in --mode cp)")
+	rootCmd.PersistentFlags().Bool("generate-bash-completion", false, "Generates Bash completion script to Stdout")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version")
 
+	viper.BindPFlags(rootCmd.PersistentFlags())
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
+	} else if os.Getenv("DAPPER_CONFIG") != "" {
+		viper.SetConfigFile(os.Getenv("DAPPER_CONFIG"))
 	} else {
 		// Find home directory.
-		//home, err := homedir.Dir()
-		//if err != nil {
-		//	fmt.Println(err)
-		//	os.Exit(1)
-		//}
+		home, err := homedir.Dir()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 
-		// Search config in home directory with name ".tmp" (without extension).
-		//viper.AddConfigPath(home)
+		// current directory
+		viper.AddConfigPath(".")
+
+		// parent direcotrx
+		viper.AddConfigPath("..")
+
+		// home directory
+		viper.AddConfigPath(home)
+
+		// config file prefix.
+		// -> .dapper{.yaml|.json|.toml}
 		viper.SetConfigName(".dapper")
 	}
+
+	// environment variables have to be prefixed with DAPPER_
+	viper.SetEnvPrefix("DAPPER")
+
+	// DAPPER_NO_CONTEXT => no-context
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 
 	viper.AutomaticEnv() // read in environment variables that match
 
