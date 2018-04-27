@@ -36,7 +36,7 @@ brew:
   skip_upload: false
 
   commit_author:
-    name: rmoriz
+    name: Roland Moriz
     email: roland@moriz.de
 
   test: |
