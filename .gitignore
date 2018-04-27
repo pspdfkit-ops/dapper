@@ -2,3 +2,8 @@
 /bin
 *.swp
 .dapper
+.cache
+.dapper.toml
+.dapper.yaml
+.dapper.yml
+.dapper.json
