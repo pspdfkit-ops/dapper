@@ -62,7 +62,7 @@ var (
 
 			dapperFile, err := file.Lookup(viper.GetString("file"))
 			if err != nil {
-				fmt.Fprint(os.Stderr, err)
+				fmt.Fprintf(os.Stderr, "%s\n", err)
 				os.Exit(1)
 			}
 
@@ -73,6 +73,10 @@ var (
 			dapperFile.Keep = viper.GetBool("keep")
 			dapperFile.NoContext = viper.GetBool("no-context")
 			dapperFile.MapUser = viper.GetBool("map-user")
+
+			if dapperFile.NoContext {
+				dapperFile.Mode = "bind"
+			}
 
 			// todo extra cmd
 			if viper.GetBool("shell") {
