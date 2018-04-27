@@ -21,9 +21,9 @@ import (
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/rancher/dapper/file"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tarent/logrus"
 )
 
 var (
@@ -50,7 +50,7 @@ var (
 				os.Exit(0)
 			}
 			if viper.GetBool("debug") {
-				logrus.SetLevel(logrus.DebugLevel)
+				log.SetLevel(log.DebugLevel)
 			}
 
 			if directory := viper.GetString("directory"); directory != "" {
@@ -110,6 +110,7 @@ func Execute(version string) {
 }
 
 func init() {
+	log.SetOutput(os.Stderr)
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.

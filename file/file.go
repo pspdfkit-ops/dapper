@@ -17,7 +17,7 @@ import (
 	"path"
 
 	"github.com/docker/docker/pkg/term"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -114,13 +114,13 @@ func (d *Dapperfile) Run(commandArgs []string) error {
 		return err
 	}
 
-	logrus.Debugf("Running build in %s", tag)
+	log.Debugf("Running build in %s", tag)
 	name, args := d.runArgs(tag, "", commandArgs)
 	defer func() {
 		if d.Keep {
-			logrus.Infof("Keeping build container %s", name)
+			log.Infof("Keeping build container %s", name)
 		} else {
-			logrus.Debugf("Deleting temp container %s", name)
+			log.Debugf("Deleting temp container %s", name)
 			d.execWithOutput("rm", "-fv", name)
 		}
 	}()
@@ -141,9 +141,9 @@ func (d *Dapperfile) Run(commandArgs []string) error {
 			if err := os.MkdirAll(targetDir, 0755); err != nil {
 				return err
 			}
-			logrus.Infof("docker cp %s %s", p, targetDir)
+			log.Infof("docker cp %s %s", p, targetDir)
 			if err := d.exec("cp", name+":"+p, targetDir); err != nil {
-				logrus.Debugf("Error copying back '%s': %s", i, err)
+				log.Debugf("Error copying back '%s': %s", i, err)
 			}
 		}
 	}
@@ -157,7 +157,7 @@ func (d *Dapperfile) Shell(commandArgs []string) error {
 		return err
 	}
 
-	logrus.Debugf("Running shell in %s", tag)
+	log.Debugf("Running shell in %s", tag)
 	_, args := d.runArgs(tag, d.env.Shell(), nil)
 	args = append([]string{"--rm"}, args...)
 
@@ -188,6 +188,7 @@ func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, [
 	args = append(args, "-e", fmt.Sprintf("DAPPER_GID=%d", os.Getgid()))
 
 	for _, env := range d.env.Env() {
+		log.Debugf("mapping env %s", env)
 		args = append(args, "-e", env)
 	}
 
@@ -303,7 +304,7 @@ func (d *Dapperfile) build() (string, error) {
 	}
 
 	tag := d.tag()
-	logrus.Debugf("Building %s using %s", tag, d.File)
+	log.Debugf("Building %s using %s", tag, d.File)
 	buildArgs := []string{"build", "-t", tag}
 
 	if d.Quiet {
@@ -355,11 +356,11 @@ func (d *Dapperfile) buildWithContent(tag, content string) error {
 		return err
 	}
 
-	logrus.Debugf("Created tempfile %s", tempfile.Name())
+	log.Debugf("Created tempfile %s", tempfile.Name())
 	defer func() {
-		logrus.Debugf("Deleting tempfile %s", tempfile.Name())
+		log.Debugf("Deleting tempfile %s", tempfile.Name())
 		if err := os.Remove(tempfile.Name()); err != nil {
-			logrus.Errorf("Failed to delete tempfile %s: %v", tempfile.Name(), err)
+			log.Errorf("Failed to delete tempfile %s: %v", tempfile.Name(), err)
 		}
 	}()
 
@@ -376,7 +377,7 @@ func (d *Dapperfile) readEnv(tag string) error {
 	cmd := exec.Command(d.docker, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		logrus.Errorf("Failed to run docker %v: %v", args, err)
+		log.Errorf("Failed to run docker %v: %v", args, err)
 		return err
 	}
 
@@ -389,16 +390,16 @@ func (d *Dapperfile) readEnv(tag string) error {
 	for _, item := range envList {
 		parts := strings.SplitN(item, "=", 2)
 		k, v := parts[0], parts[1]
-		logrus.Debugf("Reading Env: %s=%s", k, v)
+		log.Debugf("Reading Env: %s=%s", k, v)
 		d.env[k] = v
 	}
 
-	logrus.Debugf("Source: %s", d.env.Source())
-	logrus.Debugf("Cp: %s", d.env.Cp())
-	logrus.Debugf("Socket: %t", d.env.Socket())
-	logrus.Debugf("Mode: %s", d.env.Mode(d.Mode))
-	logrus.Debugf("Env: %v", d.env.Env())
-	logrus.Debugf("Output: %v", d.env.Output())
+	log.Debugf("Source: %s", d.env.Source())
+	log.Debugf("Cp: %s", d.env.Cp())
+	log.Debugf("Socket: %t", d.env.Socket())
+	log.Debugf("Mode: %s", d.env.Mode(d.Mode))
+	log.Debugf("Env: %v", d.env.Env())
+	log.Debugf("Output: %v", d.env.Output())
 
 	return nil
 }
@@ -431,33 +432,33 @@ func (d *Dapperfile) run(args ...string) error {
 }
 
 func (d *Dapperfile) exec(args ...string) error {
-	logrus.Debugf("Running %s %v", d.docker, args)
+	log.Debugf("Running %s %v", d.docker, args)
 	cmd := exec.Command(d.docker, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 	err := cmd.Run()
 	if err != nil {
-		logrus.Debugf("Failed running %s %v: %v", d.docker, args, err)
+		log.Debugf("Failed running %s %v: %v", d.docker, args, err)
 	}
 	return err
 }
 
 func (d *Dapperfile) execWithStdin(stdin *os.File, args ...string) error {
-	logrus.Debugf("Running %s %v", d.docker, args)
+	log.Debugf("Running %s %v", d.docker, args)
 	cmd := exec.Command(d.docker, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = stdin
 	err := cmd.Run()
 	if err != nil {
-		logrus.Debugf("Failed running %s %v: %v", d.docker, args, err)
+		log.Debugf("Failed running %s %v: %v", d.docker, args, err)
 	}
 	return err
 }
 
 func (d *Dapperfile) runExec(args ...string) error {
-	logrus.Debugf("Exec %s run %v", d.docker, args)
+	log.Debugf("Exec %s run %v", d.docker, args)
 	return syscall.Exec(d.docker, append([]string{"docker", "run"}, args...), os.Environ())
 }
 
