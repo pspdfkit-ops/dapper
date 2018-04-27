@@ -116,7 +116,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/.dapper.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $PWD/dapper.yaml)")
 
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "Print debugging")
 	rootCmd.PersistentFlags().StringP("file", "f", "Dockerfile.dapper", "Dockerfile to build from")
@@ -162,8 +162,8 @@ func initConfig() {
 		viper.AddConfigPath(home)
 
 		// config file prefix.
-		// -> .dapper{.yaml|.json|.toml}
-		viper.SetConfigName(".dapper")
+		// -> dapper{.yaml|.json|.toml}
+		viper.SetConfigName("dapper")
 	}
 
 	// environment variables have to be prefixed with DAPPER_
