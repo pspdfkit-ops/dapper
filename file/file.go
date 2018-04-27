@@ -291,11 +291,10 @@ func (d *Dapperfile) Build(args []string) error {
 		defer stdinFile.Close()
 
 		return d.execWithStdin(stdinFile, buildArgs...)
-	} else {
-		buildArgs = append(buildArgs, "-f", d.File)
-
-		return d.exec(buildArgs...)
 	}
+
+	buildArgs = append(buildArgs, "-f", d.File)
+	return d.exec(buildArgs...)
 }
 
 func (d *Dapperfile) build() (string, error) {

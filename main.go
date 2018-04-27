@@ -17,6 +17,7 @@ package main
 import "github.com/rancher/dapper/cmd"
 
 var (
+	// VERSION will be set at compile time, see scripts/build
 	VERSION = "0.0.0-devel"
 )
 
