@@ -2,5 +2,7 @@
 
 cd $(dirname $0)
 
+export CROSS=1
+
 ./ci
-./docker-image
+# ./docker-image

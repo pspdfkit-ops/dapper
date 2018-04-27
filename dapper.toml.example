@@ -1,0 +1,3 @@
+mode = "bind"
+no-context = true
+debug = true

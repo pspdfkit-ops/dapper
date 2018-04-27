@@ -110,7 +110,6 @@ func Execute(version string) {
 }
 
 func init() {
-	log.SetOutput(os.Stderr)
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
