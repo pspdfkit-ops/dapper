@@ -3,6 +3,7 @@
 *.swp
 .dapper
 .cache
+.github-token
 dapper.toml
 dapper.yaml
 dapper.yml

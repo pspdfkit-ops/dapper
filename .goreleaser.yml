@@ -1,0 +1,48 @@
+# .goreleaser.yml
+# Build customization
+env_files:
+  github_token: .github-token
+
+builds:
+  -
+    env:
+      - CGO_ENABLED=0
+    binary: dapper
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+    ldflags: -s -w -X main.VERSION={{.Version}}
+    asmflags: all=-trimpath={{.Env.GOPATH}}
+    gcflags: all=-trimpath={{.Env.GOPATH}}
+
+archive:
+  files:
+    - none*
+
+brew:
+  name: dapper
+
+  github:
+    owner: pspdfkit-ops
+    name: homebrew-repo
+
+  folder: Formula
+  homepage: "https://github.com/pspdfkit-ops/dapper"
+  description: "PSPDFKit's maintained fork of Rancher's dapper"
+  
+  skip_upload: false
+
+  commit_author:
+    name: rmoriz
+    email: roland@moriz.de
+
+  test: |
+    system "#{bin}/dapper --version"
+
+release:
+  github:
+    owner: pspdfkit-ops
+    name: dapper
