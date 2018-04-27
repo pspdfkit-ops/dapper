@@ -198,6 +198,8 @@ func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, [
 
 	if d.MapUser {
 		args = append(args, "-u", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
+		args = append(args, "-v", "/etc/passwd:/etc/passwd:ro")
+		args = append(args, "-v", "/etc/group:/etc/group:ro")
 	}
 
 	args = append(args, d.env.RunArgs()...)
