@@ -1,11 +1,11 @@
-FROM ubuntu:16.04
-# FROM arm=armhf/ubuntu:16.04
+FROM ubuntu:18.04
+# FROM arm=armhf/ubuntu:18.04
 
 ARG DAPPER_HOST_ARCH=amd64
 ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
 
 RUN apt-get update && \
-    apt-get install -y apt-transport-https ca-certificates file gcc git less vim wget && \
+    apt-get install -y apt-transport-https ca-certificates file gcc git less vim wget gnupg2 && \
     rm -f /bin/sh && ln -s /bin/bash /bin/sh
 
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
@@ -15,7 +15,7 @@ RUN wget -O - -q https://storage.googleapis.com/golang/go1.10.1.linux-${!GOLANG_
     wget -O /usr/local/sbin/dep -q https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 && \
     chmod 755 /usr/local/sbin/dep && \
     go get github.com/golang/lint/golint
-    
+
 ENV DOCKER_ARCH_amd64=amd64 \
     DOCKER_ARCH_arm=armhf \
     DOCKER_ARCH=DOCKER_ARCH_${ARCH}
