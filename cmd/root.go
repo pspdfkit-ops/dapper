@@ -72,6 +72,7 @@ var (
 			dapperFile.Quiet = viper.GetBool("quiet")
 			dapperFile.Keep = viper.GetBool("keep")
 			dapperFile.NoContext = viper.GetBool("no-context")
+			dapperFile.MapUser = viper.GetBool("map-user")
 
 			// todo extra cmd
 			if viper.GetBool("shell") {
@@ -123,6 +124,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("keep", false, "Don't remove the container that was used to build")
 	rootCmd.PersistentFlags().BoolP("no-context", "X", false, "send Dockerfile via stdin to docker build command")
 	rootCmd.PersistentFlags().BoolP("no-out", "O", false, "Do not copy the output back (in --mode cp)")
+	rootCmd.PersistentFlags().BoolP("map-user", "u", false, "Map UID/GID from dapper process to docker run")
 	rootCmd.PersistentFlags().Bool("generate-bash-completion", false, "Generates Bash completion script to Stdout")
 	rootCmd.PersistentFlags().BoolP("version", "v", false, "Show version")
 

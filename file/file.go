@@ -16,8 +16,8 @@ import (
 
 	"path"
 
-	"github.com/sirupsen/logrus"
 	"github.com/docker/docker/pkg/term"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -38,6 +38,7 @@ type Dapperfile struct {
 	hostArch  string
 	Keep      bool
 	NoContext bool
+	MapUser   bool
 }
 
 func Lookup(file string) (*Dapperfile, error) {
@@ -193,6 +194,10 @@ func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, [
 	if shell != "" {
 		args = append(args, "--entrypoint", shell)
 		args = append(args, "-e", "TERM")
+	}
+
+	if d.MapUser {
+		args = append(args, "-u", fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid()))
 	}
 
 	args = append(args, d.env.RunArgs()...)
