@@ -404,6 +404,7 @@ func (d *Dapperfile) readEnv(tag string) error {
 	log.Debugf("Mode: %s", d.env.Mode(d.Mode))
 	log.Debugf("Env: %v", d.env.Env())
 	log.Debugf("Output: %v", d.env.Output())
+	log.Debugf("Volumes: %v", d.env.Volumes())
 
 	return nil
 }

@@ -42,7 +42,8 @@ var (
 		DAPPER_OUTPUT          The files you want copied to the host in CP mode
 		DAPPER_DOCKER_SOCKET   Whether the Docker socket should be bound in
 		DAPPER_RUN_ARGS        Args to add to the docker run command when building
-		DAPPER_ENV             Env vars that should be copied into the build`,
+		DAPPER_ENV             Env vars that should be copied into the build
+		DAPPER_VOLUMES         Volumes that should be mounted on docker run`,
 		Run: func(cmd *cobra.Command, args []string) {
 
 			if viper.GetBool("version") {
