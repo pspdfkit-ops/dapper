@@ -192,6 +192,11 @@ func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, [
 		args = append(args, "-e", env)
 	}
 
+	for _, vol := range d.env.Volumes() {
+		log.Debugf("mapping volume %s", vol)
+		args = append(args, "-v", vol)
+	}
+
 	if shell != "" {
 		args = append(args, "--entrypoint", shell)
 		args = append(args, "-e", "TERM")

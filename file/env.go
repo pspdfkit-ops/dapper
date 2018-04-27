@@ -2,7 +2,12 @@ package file
 
 import (
 	"os"
+	"regexp"
 	"strings"
+)
+
+var (
+	autoEnvRe = regexp.MustCompile(`^[A-Z1-9_]+$`)
 )
 
 type Context map[string]string
@@ -65,6 +70,27 @@ func (c Context) Env() []string {
 		}
 	}
 
+	return ret
+}
+
+func (c Context) Volumes() []string {
+	val := []string{}
+	ret := []string{}
+
+	if v, ok := c["DAPPER_VOLUMES"]; ok && v != "" {
+		val = strings.Split(v, " ")
+		for _, v := range val {
+			if v != "" {
+				parts := strings.Split(v, ":")
+				if autoEnvRe.MatchString(parts[0]) {
+					if env := os.Getenv(parts[0]); env != "" {
+						parts[0] = env
+					}
+				}
+				ret = append(ret, strings.Join(parts, ":"))
+			}
+		}
+	}
 	return ret
 }
 
