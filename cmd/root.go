@@ -1,4 +1,4 @@
-// Copyright © 2018 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2018 PSPDFKit GmbH (https://pspdfkit.com/)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -74,9 +74,22 @@ var (
 			dapperFile.Keep = viper.GetBool("keep")
 			dapperFile.NoContext = viper.GetBool("no-context")
 			dapperFile.MapUser = viper.GetBool("map-user")
+			dapperFile.PushTo = viper.GetString("push-to")
+			dapperFile.PullFrom = viper.GetString("pull-from")
 
+			// When using no build context the image does not contain
+			// any data and the current directory has to be mounted
+			// which is "bind" mode.
+			//
 			if dapperFile.NoContext {
 				dapperFile.Mode = "bind"
+			}
+
+			if dapperFile.PullFrom != "" {
+				if err := dapperFile.PullImage(); err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
 			}
 
 			// todo extra cmd
@@ -95,6 +108,13 @@ var (
 			}
 
 			dapperFile.Run(args)
+
+			if dapperFile.PushTo != "" {
+				if err := dapperFile.PushImage(); err != nil {
+					fmt.Println(err)
+					os.Exit(1)
+				}
+			}
 		},
 	}
 )
@@ -125,6 +145,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("shell", "s", false, "Launch a shell")
 	rootCmd.PersistentFlags().BoolP("socket", "k", false, "Bind in the Docker socket")
 	rootCmd.PersistentFlags().Bool("build", false, "Perform a build")
+	rootCmd.PersistentFlags().String("pull-from", "", "Pulls a build image to the location")
+	rootCmd.PersistentFlags().String("push-to", "", "Publishes a build image to the location")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Make Docker build quieter")
 	rootCmd.PersistentFlags().Bool("keep", false, "Don't remove the container that was used to build")
 	rootCmd.PersistentFlags().BoolP("no-context", "X", false, "send Dockerfile via stdin to docker build command")

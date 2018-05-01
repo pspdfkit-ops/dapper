@@ -2,6 +2,7 @@ package file
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"syscall"
 
 	"path"
+	"text/template"
 
 	"github.com/docker/docker/pkg/term"
 	log "github.com/sirupsen/logrus"
@@ -39,6 +41,8 @@ type Dapperfile struct {
 	Keep      bool
 	NoContext bool
 	MapUser   bool
+	PushTo    string
+	PullFrom  string
 }
 
 func Lookup(file string) (*Dapperfile, error) {
@@ -108,14 +112,63 @@ func (d *Dapperfile) argsFromEnv(dockerfile string) ([]string, error) {
 	return r, nil
 }
 
-func (d *Dapperfile) Run(commandArgs []string) error {
-	tag, err := d.build()
+func (d *Dapperfile) RemoteImageNameWithTag(arg string) (string, error) {
+	tmpl, err := template.New("remote-tag").Parse(arg)
+	if err != nil {
+		panic(err)
+	}
+
+	var remoteTag bytes.Buffer
+	err = tmpl.Execute(&remoteTag, d)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Debugf("Pushing image '%s' to '%s'", d.ImageNameWithTag(), remoteTag.String())
+
+	return remoteTag.String(), nil
+}
+
+func (d *Dapperfile) PushImage() error {
+	remoteName, err := d.RemoteImageNameWithTag(d.PushTo)
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Running build in %s", tag)
-	name, args := d.runArgs(tag, "", commandArgs)
+	err = d.exec("tag", d.ImageNameWithTag(), remoteName)
+	if err != nil {
+		return err
+	}
+	err = d.exec("push", remoteName)
+	return err
+}
+
+func (d *Dapperfile) PullImage() error {
+	remoteName, err := d.RemoteImageNameWithTag(d.PullFrom)
+	if err != nil {
+		return err
+	}
+
+	err = d.exec("pull", remoteName)
+	if err != nil {
+		return err
+	}
+
+	err = d.exec("tag", remoteName, d.ImageNameWithTag())
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func (d *Dapperfile) Run(commandArgs []string) error {
+	ImageNameWithTag, err := d.build()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Running build in %s", ImageNameWithTag)
+	name, args := d.runArgs(ImageNameWithTag, "", commandArgs)
 	defer func() {
 		if d.Keep {
 			log.Infof("Keeping build container %s", name)
@@ -152,20 +205,20 @@ func (d *Dapperfile) Run(commandArgs []string) error {
 }
 
 func (d *Dapperfile) Shell(commandArgs []string) error {
-	tag, err := d.build()
+	ImageNameWithTag, err := d.build()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Running shell in %s", tag)
-	_, args := d.runArgs(tag, d.env.Shell(), nil)
+	log.Debugf("Running shell in %s", ImageNameWithTag)
+	_, args := d.runArgs(ImageNameWithTag, d.env.Shell(), nil)
 	args = append([]string{"--rm"}, args...)
 
 	return d.runExec(args...)
 }
 
-func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, []string) {
-	name := fmt.Sprintf("%s-%s", strings.Split(tag, ":")[0], randString())
+func (d *Dapperfile) runArgs(ImageNameWithTag, shell string, commandArgs []string) (string, []string) {
+	name := fmt.Sprintf("%s-%s", strings.Split(ImageNameWithTag, ":")[0], randString())
 
 	args := []string{"-i", "--name", name}
 
@@ -209,7 +262,7 @@ func (d *Dapperfile) runArgs(tag, shell string, commandArgs []string) (string, [
 	}
 
 	args = append(args, d.env.RunArgs()...)
-	args = append(args, tag)
+	args = append(args, ImageNameWithTag)
 
 	if shell != "" && len(commandArgs) == 0 {
 		args = append(args, "-")
@@ -260,6 +313,7 @@ func (d *Dapperfile) prebuild() error {
 			}
 		}
 
+		log.Debugf("Running tag with %s %s", baseImage, target)
 		return d.exec("tag", baseImage, target)
 	}
 
@@ -299,6 +353,9 @@ func (d *Dapperfile) Build(args []string) error {
 	}
 
 	buildArgs = append(buildArgs, "-f", d.File)
+	// Always attempt to pull a newer version of the base image
+	// buildArgs = append(buildArgs, "--pull")
+
 	return d.exec(buildArgs...)
 }
 
@@ -307,9 +364,10 @@ func (d *Dapperfile) build() (string, error) {
 		return "", err
 	}
 
-	tag := d.tag()
-	log.Debugf("Building %s using %s", tag, d.File)
-	buildArgs := []string{"build", "-t", tag}
+	ImageNameWithTag := d.ImageNameWithTag()
+
+	log.Debugf("Building %s using %s", ImageNameWithTag, d.File)
+	buildArgs := []string{"build", "-t", ImageNameWithTag}
 
 	if d.Quiet {
 		buildArgs = append(buildArgs, "-q")
@@ -318,6 +376,9 @@ func (d *Dapperfile) build() (string, error) {
 	for _, v := range d.Args {
 		buildArgs = append(buildArgs, "--build-arg", v)
 	}
+
+	// Always attempt to pull a newer version of the base image
+	// buildArgs = append(buildArgs, "--pull")
 
 	if d.NoContext {
 		buildArgs = append(buildArgs, "-")
@@ -340,18 +401,18 @@ func (d *Dapperfile) build() (string, error) {
 		}
 	}
 
-	if err := d.readEnv(tag); err != nil {
+	if err := d.readEnv(ImageNameWithTag); err != nil {
 		return "", err
 	}
 
 	if !d.IsBind() {
-		text := fmt.Sprintf("FROM %s\nCOPY %s %s", tag, d.env.Cp(), d.env.Source())
-		if err := d.buildWithContent(tag, text); err != nil {
+		text := fmt.Sprintf("FROM %s\nCOPY %s %s", ImageNameWithTag, d.env.Cp(), d.env.Source())
+		if err := d.buildWithContent(ImageNameWithTag, text); err != nil {
 			return "", err
 		}
 	}
 
-	return tag, nil
+	return ImageNameWithTag, nil
 }
 
 func (d *Dapperfile) buildWithContent(tag, content string) error {
@@ -409,7 +470,7 @@ func (d *Dapperfile) readEnv(tag string) error {
 	return nil
 }
 
-func (d *Dapperfile) tag() string {
+func (d *Dapperfile) ImageName() string {
 	cwd, err := os.Getwd()
 	if err == nil {
 		cwd = filepath.Base(cwd)
@@ -422,6 +483,10 @@ func (d *Dapperfile) tag() string {
 	// re-using re definition as safeguard
 	cwd = re.ReplaceAllLiteralString(cwd, "-")
 
+	return cwd
+}
+
+func (d *Dapperfile) Tag() string {
 	output, _ := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	tag := strings.TrimSpace(string(output))
 	if tag == "" {
@@ -429,7 +494,11 @@ func (d *Dapperfile) tag() string {
 	}
 	tag = re.ReplaceAllLiteralString(tag, "-")
 
-	return fmt.Sprintf("%s:%s", cwd, tag)
+	return tag
+}
+
+func (d *Dapperfile) ImageNameWithTag() string {
+	return fmt.Sprintf("%s:%s", d.ImageName(), d.Tag())
 }
 
 func (d *Dapperfile) run(args ...string) error {
