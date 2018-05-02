@@ -56,15 +56,13 @@ var (
 
 			if directory := viper.GetString("directory"); directory != "" {
 				if err := os.Chdir(directory); err != nil {
-					fmt.Fprintf(os.Stderr, "Failed to change to directory %s: %v\n", directory, err)
-					os.Exit(1)
+					log.Fatalf("Failed to change to directory %s: %v\n", directory, err)
 				}
 			}
 
 			dapperFile, err := file.Lookup(viper.GetString("file"))
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
-				os.Exit(1)
+				log.Fatal(err)
 			}
 
 			dapperFile.Mode = viper.GetString("mode")
@@ -87,8 +85,7 @@ var (
 
 			if dapperFile.PullFrom != "" {
 				if err := dapperFile.PullImage(); err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			}
 
@@ -111,8 +108,7 @@ var (
 
 			if dapperFile.PushTo != "" {
 				if err := dapperFile.PushImage(); err != nil {
-					fmt.Println(err)
-					os.Exit(1)
+					log.Fatal(err)
 				}
 			}
 		},
@@ -125,8 +121,7 @@ func Execute(version string) {
 	VERSION = version
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
@@ -170,8 +165,7 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatal(err)
 		}
 
 		// current directory
@@ -198,6 +192,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Infof("Using config file: %v", viper.ConfigFileUsed())
 	}
 }
