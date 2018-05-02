@@ -151,7 +151,8 @@ func (d *Dapperfile) PullImage() error {
 
 	err = d.exec("pull", remoteName)
 	if err != nil {
-		return err
+		log.Warnf("Could not pull %s remoteName: %v", remoteName, err)
+		return nil
 	}
 
 	err = d.exec("tag", remoteName, d.ImageNameWithTag())
