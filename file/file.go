@@ -124,7 +124,7 @@ func (d *Dapperfile) RemoteImageNameWithTag(arg string) (string, error) {
 		panic(err)
 	}
 
-	log.Debugf("Pushing image '%s' to '%s'", d.ImageNameWithTag(), remoteTag.String())
+	log.Debugf("image/tag map: '%s' <=> '%s'", d.ImageNameWithTag(), remoteTag.String())
 
 	return remoteTag.String(), nil
 }
@@ -162,13 +162,13 @@ func (d *Dapperfile) PullImage() error {
 }
 
 func (d *Dapperfile) Run(commandArgs []string) error {
-	ImageNameWithTag, err := d.build()
+	imageNameWithTag, err := d.build()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Running build in %s", ImageNameWithTag)
-	name, args := d.runArgs(ImageNameWithTag, "", commandArgs)
+	log.Debugf("Running build in %s", imageNameWithTag)
+	name, args := d.runArgs(imageNameWithTag, "", commandArgs)
 	defer func() {
 		if d.Keep {
 			log.Infof("Keeping build container %s", name)
@@ -205,20 +205,20 @@ func (d *Dapperfile) Run(commandArgs []string) error {
 }
 
 func (d *Dapperfile) Shell(commandArgs []string) error {
-	ImageNameWithTag, err := d.build()
+	imageNameWithTag, err := d.build()
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Running shell in %s", ImageNameWithTag)
-	_, args := d.runArgs(ImageNameWithTag, d.env.Shell(), nil)
+	log.Debugf("Running shell in %s", imageNameWithTag)
+	_, args := d.runArgs(imageNameWithTag, d.env.Shell(), nil)
 	args = append([]string{"--rm"}, args...)
 
 	return d.runExec(args...)
 }
 
-func (d *Dapperfile) runArgs(ImageNameWithTag, shell string, commandArgs []string) (string, []string) {
-	name := fmt.Sprintf("%s-%s", strings.Split(ImageNameWithTag, ":")[0], randString())
+func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []string) (string, []string) {
+	name := fmt.Sprintf("%s-%s", strings.Split(imageNameWithTag, ":")[0], randString())
 
 	args := []string{"-i", "--name", name}
 
@@ -262,7 +262,7 @@ func (d *Dapperfile) runArgs(ImageNameWithTag, shell string, commandArgs []strin
 	}
 
 	args = append(args, d.env.RunArgs()...)
-	args = append(args, ImageNameWithTag)
+	args = append(args, imageNameWithTag)
 
 	if shell != "" && len(commandArgs) == 0 {
 		args = append(args, "-")
@@ -353,8 +353,9 @@ func (d *Dapperfile) Build(args []string) error {
 	}
 
 	buildArgs = append(buildArgs, "-f", d.File)
+
 	// Always attempt to pull a newer version of the base image
-	// buildArgs = append(buildArgs, "--pull")
+	buildArgs = append(buildArgs, "--pull")
 
 	return d.exec(buildArgs...)
 }
@@ -364,10 +365,10 @@ func (d *Dapperfile) build() (string, error) {
 		return "", err
 	}
 
-	ImageNameWithTag := d.ImageNameWithTag()
+	imageNameWithTag := d.ImageNameWithTag()
 
-	log.Debugf("Building %s using %s", ImageNameWithTag, d.File)
-	buildArgs := []string{"build", "-t", ImageNameWithTag}
+	log.Debugf("Building %s using %s", imageNameWithTag, d.File)
+	buildArgs := []string{"build", "-t", imageNameWithTag}
 
 	if d.Quiet {
 		buildArgs = append(buildArgs, "-q")
@@ -378,7 +379,7 @@ func (d *Dapperfile) build() (string, error) {
 	}
 
 	// Always attempt to pull a newer version of the base image
-	// buildArgs = append(buildArgs, "--pull")
+	buildArgs = append(buildArgs, "--pull")
 
 	if d.NoContext {
 		buildArgs = append(buildArgs, "-")
@@ -401,18 +402,18 @@ func (d *Dapperfile) build() (string, error) {
 		}
 	}
 
-	if err := d.readEnv(ImageNameWithTag); err != nil {
+	if err := d.readEnv(imageNameWithTag); err != nil {
 		return "", err
 	}
 
 	if !d.IsBind() {
-		text := fmt.Sprintf("FROM %s\nCOPY %s %s", ImageNameWithTag, d.env.Cp(), d.env.Source())
-		if err := d.buildWithContent(ImageNameWithTag, text); err != nil {
+		text := fmt.Sprintf("FROM %s\nCOPY %s %s", imageNameWithTag, d.env.Cp(), d.env.Source())
+		if err := d.buildWithContent(imageNameWithTag, text); err != nil {
 			return "", err
 		}
 	}
 
-	return ImageNameWithTag, nil
+	return imageNameWithTag, nil
 }
 
 func (d *Dapperfile) buildWithContent(tag, content string) error {
