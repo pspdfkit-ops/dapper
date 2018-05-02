@@ -1,3 +1,5 @@
 mode = "bind"
 no-context = true
 debug = true
+pull-from = "rmoriz/test:{{ .Tag }}"
+push-to   = "rmoriz/test:{{ .Tag }}"
