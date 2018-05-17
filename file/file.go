@@ -240,6 +240,7 @@ func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []strin
 
 	args = append(args, "-e", fmt.Sprintf("DAPPER_UID=%d", os.Getuid()))
 	args = append(args, "-e", fmt.Sprintf("DAPPER_GID=%d", os.Getgid()))
+	args = append(args, "-e", "DAPPER=1")
 
 	for _, env := range d.env.Env() {
 		log.Debugf("mapping env %s", env)
