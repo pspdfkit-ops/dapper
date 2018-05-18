@@ -1,0 +1,3 @@
+FROM debian:latest
+
+ENV DAPPER_VOLUMES="/tmp:/tmp TEST:/test"

@@ -169,7 +169,11 @@ func (d *Dapperfile) Run(commandArgs []string) error {
 	}
 
 	log.Debugf("Running build in %s", imageNameWithTag)
-	name, args := d.runArgs(imageNameWithTag, "", commandArgs)
+	name, args, err := d.runArgs(imageNameWithTag, "", commandArgs)
+	if err != nil {
+		return err
+	}
+
 	defer func() {
 		if d.Keep {
 			log.Infof("Keeping build container %s", name)
@@ -212,13 +216,16 @@ func (d *Dapperfile) Shell(commandArgs []string) error {
 	}
 
 	log.Debugf("Running shell in %s", imageNameWithTag)
-	_, args := d.runArgs(imageNameWithTag, d.env.Shell(), nil)
+	_, args, err := d.runArgs(imageNameWithTag, d.env.Shell(), nil)
 	args = append([]string{"--rm"}, args...)
+	if err != nil {
+		return err
+	}
 
 	return d.runExec(args...)
 }
 
-func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []string) (string, []string) {
+func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []string) (string, []string, error) {
 	name := fmt.Sprintf("%s-%s", strings.Split(imageNameWithTag, ":")[0], randString())
 
 	args := []string{"-i", "--name", name}
@@ -247,7 +254,12 @@ func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []strin
 		args = append(args, "-e", env)
 	}
 
-	for _, vol := range d.env.Volumes() {
+	volumes, err := d.env.Volumes()
+	if err != nil {
+		return "", nil, err
+	}
+
+	for _, vol := range volumes {
 		log.Debugf("mapping volume %s", vol)
 		args = append(args, "-v", vol)
 	}
@@ -272,7 +284,7 @@ func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []strin
 		args = append(args, commandArgs...)
 	}
 
-	return name, args
+	return name, args, nil
 }
 
 func (d *Dapperfile) prebuild() error {
@@ -468,7 +480,9 @@ func (d *Dapperfile) readEnv(tag string) error {
 	log.Debugf("Mode: %s", d.env.Mode(d.Mode))
 	log.Debugf("Env: %v", d.env.Env())
 	log.Debugf("Output: %v", d.env.Output())
-	log.Debugf("Volumes: %v", d.env.Volumes())
+
+	volumes, _ := d.env.Volumes()
+	log.Debugf("Volumes: %v", volumes)
 
 	return nil
 }

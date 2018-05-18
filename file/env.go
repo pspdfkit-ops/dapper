@@ -1,6 +1,7 @@
 package file
 
 import (
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -73,7 +74,7 @@ func (c Context) Env() []string {
 	return ret
 }
 
-func (c Context) Volumes() []string {
+func (c Context) Volumes() ([]string, error) {
 	val := []string{}
 	ret := []string{}
 
@@ -85,13 +86,15 @@ func (c Context) Volumes() []string {
 				if autoEnvRe.MatchString(parts[0]) {
 					if env := os.Getenv(parts[0]); env != "" {
 						parts[0] = env
+					} else {
+						return ret, errors.New("DAPPER_VOLUME contains an unset variable: " + parts[0])
 					}
 				}
 				ret = append(ret, strings.Join(parts, ":"))
 			}
 		}
 	}
-	return ret
+	return ret, nil
 }
 
 func (c Context) Shell() string {
