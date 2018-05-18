@@ -104,7 +104,10 @@ var (
 				os.Exit(0)
 			}
 
-			dapperFile.Run(args)
+			if err := dapperFile.Run(args); err != nil {
+				log.Fatal(err)
+				os.Exit(1)
+			}
 
 			if dapperFile.PushTo != "" {
 				if err := dapperFile.PushImage(); err != nil {
@@ -122,6 +125,7 @@ func Execute(version string) {
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
+		os.Exit(1)
 	}
 }
 
