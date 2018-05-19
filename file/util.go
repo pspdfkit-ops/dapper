@@ -2,7 +2,10 @@ package file
 
 import (
 	"math/rand"
+	"os/exec"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -32,4 +35,21 @@ func toMap(str string) map[string]string {
 	}
 
 	return kv
+}
+
+func ExtractErrorCode(err error) int {
+	exitCode := 1
+	if err != nil {
+		// I guess syscall things wont work on windows
+		if runtime.GOOS == "windows" {
+			return exitCode
+		}
+
+		if exitError, ok := err.(*exec.ExitError); ok {
+			ws := exitError.Sys().(syscall.WaitStatus)
+			exitCode = ws.ExitStatus()
+		}
+	}
+
+	return exitCode
 }

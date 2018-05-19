@@ -105,8 +105,8 @@ var (
 			}
 
 			if err := dapperFile.Run(args); err != nil {
-				log.Fatal(err)
-				os.Exit(1)
+				log.Error(err)
+				os.Exit(file.ExtractErrorCode(err))
 			}
 
 			if dapperFile.PushTo != "" {
@@ -124,8 +124,8 @@ func Execute(version string) {
 	VERSION = version
 
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Error(err)
+		os.Exit(file.ExtractErrorCode(err))
 	}
 }
 
