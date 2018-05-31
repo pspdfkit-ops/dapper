@@ -1,0 +1,3 @@
+FROM ruby:alpine
+# /source is the default location for files added/mounted from the host
+WORKDIR /source

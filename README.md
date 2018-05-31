@@ -1,133 +1,164 @@
-# Dapper - Docker Build Wrapper
+# PSPDFKit's Dapper fork
+This is PSPDFKit's fork of [Rancher's dapper](https://github.com/rancher/dapper), a tool to wrap any existing build tool in an consistent environment.
 
-Dapper is a tool to wrap any existing build tool in an consistent environment.  This allows people to build your software from source or modify it without worrying about setting up a build environment.  The approach is very simple and taken from a common pattern that has adopted by many open source projects.  Create a file called `Dockerfile.dapper` in the root of your repository.  Dapper will build that Dockerfile and then execute a container based off of the resulting image.  Dapper will also copy in source files and copy out resulting artifacts or will use bind mounting if you choose.
+Our use case is to run existing test jobs within a defined environment (= Docker container) and to keep things as simple as possible and as clear as possbile. We don't want extra steps to build and release base images for various testing, we don't want to have logic defined in the CI system. As much as possible should stay inside the version control system.
+
+Caveat: Dapper is not intended to be used to build "production images". Support for pulling and pushing images to a docker registry was added to provide some kind of distributed build cache, only.
+Dockerfiles for use with dapper usually contain special instructions based on `ENV` statements (environment variables) and should also be named with a `.dapper` suffic.
+
+Please see the example section at the end of this README for practical use cases and useful combination of switches.
 
 ## Installation
 
-```sh
-curl -sL https://releases.rancher.com/dapper/latest/dapper-`uname -s`-`uname -m` > /usr/local/bin/dapper
-chmod +x /usr/local/bin/dapper
+In general binary releases are available at [https://github.com/pspdfkit-ops/dapper/releases](https://github.com/pspdfkit-ops/dapper/releases).
+
+
+#### macOS using Homebrew
+
+```Shell
+brew tap pspdfkit-ops/repo
+brew install dapper
 ```
 
-From source
+## Usage
 
-```sh
-go get github.com/rancher/dapper
+1. create a `Dockerfile.dapper` to define a docker image
+2. `dapper -- /bin/sh -c 'echo "hello from the inside"'`
+
+In a real-world use case you would specify your build/test environment in `Dockerfile.dapper` and call the existing jobs using dapper. For example let's say you have a script called `bin/ci-lint` which your CI system usually executes. After adding the `Dockerfile.dapper` you can just call `dapper -- bin/ci-lint`. Congrats, your job now runs inside a docker container. No custom build/test node configuration needed anymore.
+
+### Actions, Flags, Configuration and Defaults
+
+Dapper can be called with various cli flags, you can set values using environment variables (`DAPPER_<setting_in_uppercase>`, i.ex. `DAPPER_DEBUG=1`), use a configuration file (`dapper{.yaml|.json|.toml}`) or everything together. CLI flags have the highest priority.
+
+
+```
+Flags:
+      --build                      Perform a build
+  -s, --shell                      Launch a shell
+      --config string              config file (default is $PWD/dapper.yaml)
+  -d, --debug                      Print debugging
+  -C, --directory string           The directory in which to run, --file is relative to this (default ".")
+  -f, --file string                Dockerfile to build from (default "Dockerfile.dapper")
+      --generate-bash-completion   Generates Bash completion script to Stdout
+  -h, --help                       help for dapper
+      --keep                       Don't remove the container that was used to build
+  -u, --map-user                   Map UID/GID from dapper process to docker run
+  -m, --mode string                Execution mode for Dapper bind/cp/auto (default "auto")
+  -X, --no-context                 send Dockerfile via stdin to docker build command
+  -O, --no-out                     Do not copy the output back (in --mode cp)
+      --pull-from string           Pulls a build image to the location
+      --push-to string             Publishes a build image to the location
+  -q, --quiet                      Make Docker build quieter
+  -k, --socket                     Bind in the Docker socket
+  -v, --version                    Show version
 ```
 
-## Example
 
-Dapper is built using dapper so the following is a decent example
+#### Dockerfile.dapper
 
-```sh
-go get github.com/rancher/dapper
-git clone https://github.com/rancher/dapper.git
-cd dapper
-dapper
+```shell
+  Dockerfile variables
+
+  DAPPER_SOURCE          The destination directory in the container to bind/copy the source
+  DAPPER_CP              The location in the host to find the source
+  DAPPER_OUTPUT          The files you want copied to the host in CP mode
+  DAPPER_DOCKER_SOCKET   Whether the Docker socket should be bound in
+  DAPPER_RUN_ARGS        Args to add to the docker run command when building
+  DAPPER_ENV             Env vars that should be copied into the build
+  DAPPER_VOLUMES         Volumes that should be mounted on docker run.
 ```
 
-This is the `Dockerfile.dapper` used
+## Features
 
-```Dockerfile
-FROM golang:1.4
-RUN go get github.com/tools/godep
-ENV DAPPER_SOURCE /go/src/github.com/rancher/dapper
-ENV DAPPER_OUTPUT bin
-WORKDIR ${DAPPER_SOURCE}
-ENTRYPOINT ["./script/build"]
+
+#### Magic Environment Variables in Dockerfile.dapper
+
+tbd
+
+#### Variants
+
+Let's say you have a huge mono repo with lots of different projects. Some projects can share the same image, other ones need a custom one. Just create multiple files.
+
+Example layout:
+
+```
+monorepo
+├── Dockerfile.ruby.dapper
+├── Dockerfile.e2e.dapper
+└── Dockerfile.cpp.dapper
 ```
 
-## Using
-
-### Dockerfile.dapper
-
-The `Dockerfile.dapper` is intended to create a build environment but not really build your code.  For example if you need build tools such as `make` or `bundler` or language environments for Ruby, Python, Java, etc.
-
-The `ENTRYPOINT`, `CMD`, and `WORKDIR` defined in `Dockerfile.dapper` are what are used to initiate your build.  When running `dapper foo bar`, `foo bar` will be passed as the docker CMD.  For example, running `dapper make install` will do the basic equivalent of `docker run -it --rm build-image make install`.  If you want you can set the `ENTRYPOINT` to `make` and then `dapper install` will be the same as `make install`.  Either approach is fine.
-
-You can also customize your build container image with build arguments (via `ARG` Dockerfile instructions), which are populated from environment variables on dapper image build. That is useful if you want to parameterize your build for different platforms and you're using essentially the same build environment, only on different platforms. For example, if you have `ARG ARCH` in Dockerfile.dapper, you can have `ARCH=arm` in your environment variables, and when you run `dapper -s` your dapper image is built with `--build-arg ARCH=arm` and `$ARCH` is effectively replaced with `arm` in the resulting dapper image.
-
-### Dapper Modes: Bind mount or CP
-
-Dapper runs in two modes `bind` or `cp`, meaning bind mount in the source or cp in the source.  Depending on your environment one or the other could be preferred.  If your host is Linux bind mounting is typically preferred because it is very fast.  If you are running on Mac, Windows, or with a remote Docker daemon, CP is usually your only option.  You can force a specific mode with
-
-    dapper --mode|m MODE
-
-For example `dapper -m cp` or `dapper -m bind`.
-
-### Interactive Shell
-
-If you just want a shell in the build environment run `dapper -s`.
-
-## Configuring
-
-Configuring the behavior of Dapper is done through ENV variables in the `Dockerfile.dapper`.
-
-### DAPPER_SOURCE
-
-`DAPPER_SOURCE` is the location in the container of where your source should be.  For go applications this might look like `ENV DAPPER_SOURCE /go/src/github.com/rancher/dapper`
-
-In bind mode `DAPPER_SOURCE` is used in the Docker `run` command as follows
-
-    docker run -v .:${DAPPER_SOURCE} build-image
-
-In CP mode `DAPPER_SOURCE` is used in a Docker `cp` command as follows
-
-    docker cp . build-container:${DAPPER_SOURCE}
-
-The default value of `DAPPER_SOURCE` is `/source`.
-
-### DAPPER_CP
-
-`DAPPER_CP` is the location in the host that should be copied to `DAPPER_SOURCE` in the container.
-
-In bind mode `DAPPER_CP` is used in the Docker `run` command as follows
-
-    docker run -v ${DAPPER_CP}:/source/ build-image
-
-In CP mode `DAPPER_CP` is used in a Docker `cp` command as follows
-
-    docker cp ${DAPPER_CP} build-container:/source/
-
-The default value of `DAPPER_CP` is `.`.
-
-### DAPPER_OUTPUT
-
-`DAPPER_OUTPUT` is used after the build is done to copy the build artifacts back to the host.  The setting is only used in CP mode.  After the build is done equivalent Docker `cp` command is ran
-
-    docker cp ${DAPPER_SOURCE}/${DAPPER_OUTPUT} .
-
-If you don't want the `DAPPER_OUTPUT` to be relative to the `DAPPER_SOURCE` then set `DAPPER_OUTPUT` to a strings that starts with `/`. 
+| Dapperfile | Variant | image name |
+|-|-|-|
+|Dockerfile.dapper|(none)|monorepo:$branch|
+|Dockerfile.ruby.dapper|ruby|monorepo-ruby:$branch|
+|Dockerfile.e2e.dapper|e2e|monorepo-e2e:$branch|
+|Dockerfile.cpp.dapper|cpp|monorepo-cpp:$branch|
 
 
-### DAPPER_DOCKER_SOCKET
 
-Setting `DAPPER_DOCKER_SOCKET` will cause the Docker socket to be bind mounted into your build.  This is so that your build can use Docker without requiring Docker-in-Docker.  The equivalent parameter will be added to Docker.
+#### User mapping (UID/GID) and context-free images
 
-   docker run -v /var/run/docker.sock:/var/run/docker.sock build-image
+There are several ways to get your data into a container. One is to ADD the files at image build time, by building an intermediary image (`cp` mode), and using volume mount (`bind` mode) it when the container starts. The latter is the preferred workflow as it keeps your images clean and "runtime only".
 
-### DAPPER_RUN_ARGS
+Even when you don't ADD your code in the `Dockerfile.dapper`, docker cli will send everything to
+dockerd to build the image (build context) which sucks in case of huge monorepos.
 
-`DAPPER_RUN_ARGS` is used to add any parameters to the Docker `run` command for the build container.  For example you may want to set `--privileged` if you need to do advanced operations as root.
+`dapper -X` will create the image outside of the current context and bind/volume-mount the current directory. This can be tricky because of user permissions and different user ids. Therefore by default the container will also mount `/etc/passwd` and `/etc/group` from the host to match the UID. This is handy if your command creates a new file, e.g. code coverage or a binary artifact. This files can then be picked up e.g. by a Jenkins plugin.
 
-### DAPPER_ENV
 
-`DAPPER_ENV` is a list of ENV variables that should be copied for the host context.  Setting `DAPPER_ENV=A B C` is the equivalent of adding to the Docker `run` command the following
+#### Pull/Push Images
 
-    docker run -e A -e B -e C build-image
+Let's say you have serveral build nodes. You don't want to re-build the images on each node. By using the `--pull-from` and `--push-to` options, images will be pulled and/or pushed from/to a Docker repository. Docker's own image management also act's as a local cache.
 
-## License
+e.g.
 
-Copyright (c) 2015-2018 [Rancher Labs, Inc.](http://rancher.com)
+```shell
+  dapper \
+    --pull-from registry.docker.example.com/ci/project:latest \
+    --push-to   registry.docker.example.com/ci/project:latest
+```
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+or use the fully automagic mode:
 
-[http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
+```shell
+  dapper \
+    --pull-from registry.example.com/ci/ \
+    --push-to   registry.example.com/ci/
+```
+(hint: last character must be a slash, `:` must not appear)
+Dapper will then automatically create the right name.
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Example:
+
+| project directory | normalized name (auto) | branch (auto) | Filename |  variant (auto) | name and tag (auto) | full name (auto)|
+|-|-|-|-|-|-|-|-|-|
+| example | example | staging | Dockerfile.e2e.dapper | e2e | example-e2e:staging | registry.example.com/ci/example-e2e:staging |
+| Project@0 | project | user/branch | Dockerfile.dapper | (none) | project:user-branch | registry.example.com/ci/project:user-branch |
+| Project@1 | project |user/branch | Dockerfile.cpp.dapper | cpp| project:user-branch | registry.example.com/ci/project-cpp:user-branch |
+
+
+##### Go templating
+
+You can also use the [Go template syntax](https://golang.org/pkg/text/template) to construct the target and even specify everything in a `docker.toml` file:
+
+```toml
+no-context = true
+map-user = true
+pull-from = "registry.example.com/ci/project-{{ .Variant }}:{{ .Tag }}"
+push-to = "registry.example.com/ci/project-{{ .Variant }}:{{ .Tag }}"
+```
+
+
+
+## Examples and How-to
+
+
+see `examples` directory (WIP).
+
+
+#### Alternatives
+
+- Test Kitchen + Kitchen-Docker (Ruby)
+- various solutions tied to a specific CI system (e.g. Gitlab CI, drone, travis, Jenkins)
