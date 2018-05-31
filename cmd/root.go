@@ -74,6 +74,7 @@ var (
 			dapperFile.MapUser = viper.GetBool("map-user")
 			dapperFile.PushTo = viper.GetString("push-to")
 			dapperFile.PullFrom = viper.GetString("pull-from")
+			dapperFile.Variant = viper.GetString("variant")
 
 			// When using no build context the image does not contain
 			// any data and the current directory has to be mounted
@@ -81,6 +82,15 @@ var (
 			//
 			if dapperFile.NoContext {
 				dapperFile.Mode = "bind"
+			}
+
+			if dapperFile.Variant == "" {
+				log.Debug("variant not specified using argv/env/config-file")
+
+				if variant := file.ExtractVariantFromFilename(viper.GetString("file")); variant != "" {
+					log.Debugf("variant detected by filename: %s", variant)
+					dapperFile.Variant = variant
+				}
 			}
 
 			if dapperFile.PullFrom != "" {
@@ -144,6 +154,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP("shell", "s", false, "Launch a shell")
 	rootCmd.PersistentFlags().BoolP("socket", "k", false, "Bind in the Docker socket")
 	rootCmd.PersistentFlags().Bool("build", false, "Perform a build")
+	rootCmd.PersistentFlags().String("variant", "", "variant, suffix to use to push/pull docker image")
 	rootCmd.PersistentFlags().String("pull-from", "", "Pulls a build image to the location")
 	rootCmd.PersistentFlags().String("push-to", "", "Publishes a build image to the location")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Make Docker build quieter")

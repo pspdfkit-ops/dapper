@@ -53,3 +53,19 @@ func ExtractErrorCode(err error) int {
 
 	return exitCode
 }
+
+func ExtractVariantFromFilename(filename string) string {
+	/*
+		Convention:
+		- Dockerfile.dapper
+		- Dockerfile.variant.dapper
+	*/
+	variant := ""
+	parts := strings.Split(filename, ".")
+
+	if len(parts) == 3 {
+		variant = parts[1]
+	}
+
+	return variant
+}

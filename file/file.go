@@ -43,6 +43,7 @@ type Dapperfile struct {
 	MapUser   bool
 	PushTo    string
 	PullFrom  string
+	Variant   string
 }
 
 func Lookup(file string) (*Dapperfile, error) {
@@ -124,9 +125,25 @@ func (d *Dapperfile) RemoteImageNameWithTag(arg string) (string, error) {
 		panic(err)
 	}
 
-	log.Debugf("image/tag map: '%s' <=> '%s'", d.ImageNameWithTag(), remoteTag.String())
+	name := remoteTag.String()
 
-	return remoteTag.String(), nil
+	/*
+		go templates are powerful but hard to type. Let's help users with some magic:
+
+		- if no ":" is in the name AND name ends with /
+			e.g. "registry.example.com/ci/"
+			add name and tag automatically:
+			"registry.example.com/ci/myimage:master"
+	*/
+
+	if !strings.Contains(name, ":") && strings.HasSuffix(name, "/") {
+		log.Debugf("remote specification will be auto-completed")
+		name = name + d.ImageNameWithTag()
+	}
+
+	log.Debugf("image/tag map: '%s' <=> '%s'", d.ImageNameWithTag(), name)
+
+	return name, nil
 }
 
 func (d *Dapperfile) PushImage() error {
@@ -494,6 +511,11 @@ func (d *Dapperfile) ImageName() string {
 	} else {
 		cwd = "dapper-unknown"
 	}
+
+	if d.Variant != "" {
+		cwd = fmt.Sprintf("%s-%s", cwd, d.Variant)
+	}
+
 	// repository name must be lowercase
 	cwd = strings.ToLower(cwd)
 	// repository must not include @ (e.g. Jenkins workspace)
