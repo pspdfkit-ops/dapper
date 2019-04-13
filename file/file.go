@@ -44,6 +44,7 @@ type Dapperfile struct {
 	PushTo    string
 	PullFrom  string
 	Variant   string
+    MountSuffix string
 }
 
 func Lookup(file string) (*Dapperfile, error) {
@@ -258,7 +259,11 @@ func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []strin
 	if d.IsBind() {
 		wd, err := os.Getwd()
 		if err == nil {
-			args = append(args, "-v", fmt.Sprintf("%s:%s", fmt.Sprintf("%s/%s", wd, d.env.Cp()), d.env.Source()))
+			suffix := ""
+			if d.MountSuffix != "" {
+				suffix = ":" + d.MountSuffix
+			}
+			args = append(args, "-v", fmt.Sprintf("%s:%s%s", fmt.Sprintf("%s/%s", wd, d.env.Cp()), d.env.Source(), suffix))
 		}
 	}
 
