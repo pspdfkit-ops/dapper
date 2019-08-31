@@ -260,8 +260,8 @@ func (d *Dapperfile) runArgs(imageNameWithTag, shell string, commandArgs []strin
 		wd, err := os.Getwd()
 		if err == nil {
 			suffix := ""
-			if d.MountSuffix != "" {
-				suffix = ":" + d.MountSuffix
+			if d.env.MountSuffix(d.MountSuffix) != "" {
+				suffix = ":" + d.env.MountSuffix(d.MountSuffix)
 			}
 			args = append(args, "-v", fmt.Sprintf("%s:%s%s", fmt.Sprintf("%s/%s", wd, d.env.Cp()), d.env.Source(), suffix))
 		}

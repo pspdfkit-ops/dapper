@@ -56,6 +56,14 @@ func (c Context) Mode(mode string) string {
 	return "cp"
 }
 
+func (c Context) MountSuffix(mountSuffix string) string {
+	switch mountSuffix {
+	case "delegated", "cached", "consistent":
+		return mountSuffix
+	}
+	return "consistent"
+}
+
 func (c Context) Env() []string {
 	val := []string{}
 	if v, ok := c["DAPPER_ENV"]; ok && v != "" {

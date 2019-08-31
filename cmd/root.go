@@ -75,6 +75,7 @@ var (
 			dapperFile.PushTo = viper.GetString("push-to")
 			dapperFile.PullFrom = viper.GetString("pull-from")
 			dapperFile.Variant = viper.GetString("variant")
+			dapperFile.MountSuffix = viper.GetString("mount-suffix")
 
 			// When using no build context the image does not contain
 			// any data and the current directory has to be mounted
