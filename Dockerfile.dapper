@@ -11,10 +11,10 @@ RUN apt-get update && \
 ENV GOLANG_ARCH_amd64=amd64 GOLANG_ARCH_arm=armv6l GOLANG_ARCH=GOLANG_ARCH_${ARCH} \
     GOPATH=/go PATH=/go/bin:/usr/local/go/bin:${PATH} SHELL=/bin/bash
 
-RUN wget -O - -q https://storage.googleapis.com/golang/go1.10.1.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
-    wget -O /usr/local/sbin/dep -q https://github.com/golang/dep/releases/download/v0.4.1/dep-linux-amd64 && \
+RUN wget -O - -q https://storage.googleapis.com/golang/go1.13.linux-${!GOLANG_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
+    wget -O /usr/local/sbin/dep -q https://github.com/golang/dep/releases/download/v0.5.4/dep-linux-amd64 && \
     chmod 755 /usr/local/sbin/dep && \
-    go get github.com/golang/lint/golint
+    go get golang.org/x/lint/golint
 
 ENV DOCKER_ARCH_amd64=amd64 \
     DOCKER_ARCH_arm=armhf \
