@@ -18,29 +18,28 @@ builds:
     asmflags: all=-trimpath={{.Env.GOPATH}}
     gcflags: all=-trimpath={{.Env.GOPATH}}
 
-archive:
-  files:
-    - none*
+archives:
+  - files:
+      - none*
 
-brew:
-  name: dapper
+brews:
+  - name: dapper
+    github:
+      owner: pspdfkit-ops
+      name: homebrew-repo
 
-  github:
-    owner: pspdfkit-ops
-    name: homebrew-repo
+    folder: Formula
+    homepage: "https://github.com/pspdfkit-ops/dapper"
+    description: "PSPDFKit's maintained fork of Rancher's dapper"
 
-  folder: Formula
-  homepage: "https://github.com/pspdfkit-ops/dapper"
-  description: "PSPDFKit's maintained fork of Rancher's dapper"
-  
-  skip_upload: false
+    skip_upload: false
 
-  commit_author:
-    name: Roland Moriz
-    email: roland@moriz.de
+    commit_author:
+      name: Roland Moriz
+      email: roland@moriz.de
 
-  test: |
-    system "#{bin}/dapper --version"
+    test: |
+      system "#{bin}/dapper --version"
 
 release:
   github:
