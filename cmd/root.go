@@ -158,6 +158,7 @@ func init() {
 	rootCmd.PersistentFlags().String("variant", "", "variant, suffix to use to push/pull docker image")
 	rootCmd.PersistentFlags().String("pull-from", "", "Pulls a build image to the location")
 	rootCmd.PersistentFlags().String("push-to", "", "Publishes a build image to the location")
+	rootCmd.PersistentFlags().String("mount-suffix", "", "bind mount option to increase performance.\nValid options are \"consistent\", \"cached\", \"delegated\" or empty/none (default)")
 	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Make Docker build quieter")
 	rootCmd.PersistentFlags().Bool("keep", false, "Don't remove the container that was used to build")
 	rootCmd.PersistentFlags().BoolP("no-context", "X", false, "send Dockerfile via stdin to docker build command")

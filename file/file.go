@@ -28,23 +28,23 @@ var (
 )
 
 type Dapperfile struct {
-	File      string
-	Mode      string
-	docker    string
-	env       Context
-	Socket    bool
-	NoOut     bool
-	Args      []string
-	From      string
-	Quiet     bool
-	hostArch  string
-	Keep      bool
-	NoContext bool
-	MapUser   bool
-	PushTo    string
-	PullFrom  string
-	Variant   string
-    MountSuffix string
+	File        string
+	Mode        string
+	docker      string
+	env         Context
+	Socket      bool
+	NoOut       bool
+	Args        []string
+	From        string
+	Quiet       bool
+	hostArch    string
+	Keep        bool
+	NoContext   bool
+	MapUser     bool
+	PushTo      string
+	PullFrom    string
+	Variant     string
+	MountSuffix string
 }
 
 func Lookup(file string) (*Dapperfile, error) {
